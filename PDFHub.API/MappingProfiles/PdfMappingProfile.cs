@@ -10,5 +10,8 @@ public class PdfMappingProfile : Profile
     {
         CreateMap<PdfFiles, UploadPdfResponse>()
             .ForMember(dest => dest.UploadedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+        CreateMap<PdfFiles, EditPdfResponse>()
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
     }
 }

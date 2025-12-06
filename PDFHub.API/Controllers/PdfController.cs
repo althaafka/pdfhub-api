@@ -36,4 +36,24 @@ public class PdfController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPatch("edit/{id}")]
+    public async Task<IActionResult> EditPdf(int id, [FromBody] EditPdfRequestDto editDto)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var result = await _pdfService.EditPdfAsync(id, editDto, userId);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(result);
+    }
 }

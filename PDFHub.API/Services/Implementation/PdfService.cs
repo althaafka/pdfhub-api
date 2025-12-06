@@ -35,7 +35,7 @@ public class PdfService : IPdfService
                 return ServiceResult<UploadPdfResponse>.FailureResult("Only PDF files are allowed");
             }
 
-            // Create uploads directory if it doesn't exist
+            // Create uploads directory if not exist
             var uploadsFolder = Path.Combine(_environment.ContentRootPath, "Uploads", "PDFs");
             if (!Directory.Exists(uploadsFolder))
             {
@@ -61,7 +61,7 @@ public class PdfService : IPdfService
                 UserId = userId
             };
 
-            // Save to database using repository
+            // Save to database
             var savedPdf = await _pdfRepository.AddAsync(pdfFile);
 
             var response = _mapper.Map<UploadPdfResponse>(savedPdf);
@@ -71,6 +71,52 @@ public class PdfService : IPdfService
         catch (Exception ex)
         {
             return ServiceResult<UploadPdfResponse>.FailureResult("An error occurred while uploading the file");
+        }
+    }
+
+    public async Task<ServiceResult<EditPdfResponse>> EditPdfAsync(int id, EditPdfRequestDto editDto, string userId)
+    {
+        try
+        {
+            // Get the existing PDF file
+            var pdfFile = await _pdfRepository.GetByIdAsync(id);
+
+            if (pdfFile == null)
+            {
+                return ServiceResult<EditPdfResponse>.FailureResult("PDF file not found");
+            }
+
+            // Verify ownership
+            if (pdfFile.UserId != userId)
+            {
+                return ServiceResult<EditPdfResponse>.FailureResult("Unauthorized: You don't have permission to edit this PDF");
+            }
+
+            // Update
+            if (!string.IsNullOrWhiteSpace(editDto.Filename))
+            {
+                pdfFile.FileName = editDto.Filename;
+            }
+
+            if (!string.IsNullOrWhiteSpace(editDto.Description))
+            {
+                pdfFile.Description = editDto.Description;
+            }
+
+            var updatedPdf = await _pdfRepository.UpdateAsync(pdfFile);
+
+            if (updatedPdf == null)
+            {
+                return ServiceResult<EditPdfResponse>.FailureResult("Failed to update PDF");
+            }
+
+            var response = _mapper.Map<EditPdfResponse>(updatedPdf);
+
+            return ServiceResult<EditPdfResponse>.SuccessResult(response, "PDF updated successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<EditPdfResponse>.FailureResult("An error occurred while updating the PDF");
         }
     }
 }
