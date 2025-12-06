@@ -52,10 +52,10 @@ public class PdfService : IPdfService
             // Save file metadata to database
             var pdfFile = new PdfFiles
             {
-                OriginalFileName = file.FileName,
-                StoredFilePath = filePath,
+                FileName = file.FileName,
+                FilePath = filePath,
                 FileSize = file.Length,
-                User = await _context.Users.FindAsync(userId)
+                UserId = userId
             };
 
             _context.PdfFiles.Add(pdfFile);
@@ -64,8 +64,8 @@ public class PdfService : IPdfService
             var response = new UploadPdfResponse
             {
                 Id = pdfFile.Id,
-                OriginalFileName = pdfFile.OriginalFileName,
-                StoredFilePath = pdfFile.StoredFilePath,
+                OriginalFileName = pdfFile.FileName,
+                StoredFilePath = pdfFile.FilePath,
                 FileSize = pdfFile.FileSize,
                 UploadedAt = DateTime.UtcNow
             };

@@ -22,5 +22,15 @@ public class PDFHubDbContext : IdentityDbContext<IdentityUser>
         {
             entity.HasIndex(e => e.Token).IsUnique();
         });
+
+        builder.Entity<PdfFiles>(entity =>
+        {
+            entity.Property(e => e.FileName)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(1000);
+        });
     }
 }
