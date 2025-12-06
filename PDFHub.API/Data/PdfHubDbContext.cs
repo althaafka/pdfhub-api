@@ -20,23 +20,7 @@ public class PDFHubDbContext : IdentityDbContext<IdentityUser>
 
         builder.Entity<RefreshToken>(entity =>
         {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Token).IsRequired();
-            entity.Property(e => e.UserId).IsRequired();
             entity.HasIndex(e => e.Token).IsUnique();
-
-            entity.HasOne(e => e.User)
-                .WithMany()
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        builder.Entity<PdfFiles>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.OriginalFileName).IsRequired();
-            entity.Property(e => e.StoredFilePath).IsRequired();
-            entity.Property(e => e.FileSize).IsRequired();
         });
     }
 }

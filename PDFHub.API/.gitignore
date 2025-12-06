@@ -9,6 +9,9 @@
 # Application settings files
 appsettings*.json
 
+# File Uploads
+Uploads/
+
 # User-specific files
 *.rsuser
 *.suo

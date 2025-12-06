@@ -8,7 +8,7 @@ using PDFHub.API.Data;
 
 #nullable disable
 
-namespace PDFHub.API.Migrations
+namespace PDFHub.Migrations
 {
     [DbContext(typeof(PDFHubDbContext))]
     partial class PDFHubDbContextModelSnapshot : ModelSnapshot
@@ -226,6 +226,10 @@ namespace PDFHub.API.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
@@ -237,7 +241,13 @@ namespace PDFHub.API.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("PdfFiles");
                 });
@@ -338,6 +348,17 @@ namespace PDFHub.API.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PDFHub.API.Models.Domains.PdfFiles", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PDFHub.API.Models.Domains.RefreshToken", b =>
