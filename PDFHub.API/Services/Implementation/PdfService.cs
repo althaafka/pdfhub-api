@@ -1,19 +1,22 @@
-using PDFHub.API.Data;
+using AutoMapper;
 using PDFHub.API.Models;
 using PDFHub.API.Models.Domains;
 using PDFHub.API.Models.DTOs;
+using PDFHub.API.Repositories;
 
 namespace PDFHub.API.Services;
 
 public class PdfService : IPdfService
 {
-    private readonly PDFHubDbContext _context;
+    private readonly IPdfRepository _pdfRepository;
     private readonly IWebHostEnvironment _environment;
+    private readonly IMapper _mapper;
 
-    public PdfService(PDFHubDbContext context, IWebHostEnvironment environment)
+    public PdfService(IPdfRepository pdfRepository, IWebHostEnvironment environment, IMapper mapper)
     {
-        _context = context;
+        _pdfRepository = pdfRepository;
         _environment = environment;
+        _mapper = mapper;
     }
 
     public async Task<ServiceResult<UploadPdfResponse>> UploadPdfAsync(IFormFile file, string userId)
@@ -58,17 +61,10 @@ public class PdfService : IPdfService
                 UserId = userId
             };
 
-            _context.PdfFiles.Add(pdfFile);
-            await _context.SaveChangesAsync();
+            // Save to database using repository
+            var savedPdf = await _pdfRepository.AddAsync(pdfFile);
 
-            var response = new UploadPdfResponse
-            {
-                Id = pdfFile.Id,
-                FileName = pdfFile.FileName,
-                FilePath = pdfFile.FilePath,
-                FileSize = pdfFile.FileSize,
-                UploadedAt = DateTime.UtcNow
-            };
+            var response = _mapper.Map<UploadPdfResponse>(savedPdf);
 
             return ServiceResult<UploadPdfResponse>.SuccessResult(response, "PDF uploaded successfully");
         }

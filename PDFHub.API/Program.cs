@@ -83,6 +83,9 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
+
 // Repository Layer
 builder.Services.AddScoped<IPdfRepository, PdfRepository>();
 
