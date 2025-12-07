@@ -117,4 +117,24 @@ public class PdfController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPost("{id}/summarize")]
+    public async Task<IActionResult> SummarizePdf(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var result = await _pdfService.SummarizePdfAsync(id, userId);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(result);
+    }
 }

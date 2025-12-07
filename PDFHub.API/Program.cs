@@ -93,6 +93,8 @@ builder.Services.AddScoped<IPdfRepository, PdfRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IPdfTextExtractorService, PdfTextExtractorService>();
+builder.Services.AddScoped<IGeminiApiService, GeminiApiService>();
 
 // FluentValidation
 builder.Services.AddFluentValidationAutoValidation();

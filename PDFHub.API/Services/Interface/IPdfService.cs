@@ -10,4 +10,5 @@ public interface IPdfService
     Task<ServiceResult<PdfResponse>> GetPdfByIdAsync(int id, string userId);
     Task<ServiceResult<List<PdfResponse>>> GetMyPdfsAsync(string userId);
     Task<ServiceResult> DeletePdfAsync(int id, string userId);
+    Task<ServiceResult<SummaryResponse>> SummarizePdfAsync(int id, string userId);
 }

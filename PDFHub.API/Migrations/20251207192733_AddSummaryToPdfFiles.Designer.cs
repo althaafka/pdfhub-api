@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PDFHub.API.Data;
 
@@ -11,9 +12,11 @@ using PDFHub.API.Data;
 namespace PDFHub.Migrations
 {
     [DbContext(typeof(PDFHubDbContext))]
-    partial class PDFHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251207192733_AddSummaryToPdfFiles")]
+    partial class AddSummaryToPdfFiles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

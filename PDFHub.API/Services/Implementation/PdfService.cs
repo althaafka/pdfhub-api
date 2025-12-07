@@ -11,12 +11,21 @@ public class PdfService : IPdfService
     private readonly IPdfRepository _pdfRepository;
     private readonly IWebHostEnvironment _environment;
     private readonly IMapper _mapper;
+    private readonly IPdfTextExtractorService _textExtractor;
+    private readonly IGeminiApiService _geminiService;
 
-    public PdfService(IPdfRepository pdfRepository, IWebHostEnvironment environment, IMapper mapper)
+    public PdfService(
+        IPdfRepository pdfRepository,
+        IWebHostEnvironment environment,
+        IMapper mapper,
+        IPdfTextExtractorService textExtractor,
+        IGeminiApiService geminiService)
     {
         _pdfRepository = pdfRepository;
         _environment = environment;
         _mapper = mapper;
+        _textExtractor = textExtractor;
+        _geminiService = geminiService;
     }
 
     public async Task<ServiceResult<PdfResponse>> UploadPdfAsync(IFormFile file, string userId)
@@ -193,6 +202,59 @@ public class PdfService : IPdfService
         catch (Exception ex)
         {
             return ServiceResult.FailureResult("An error occurred while deleting the PDF");
+        }
+    }
+
+    public async Task<ServiceResult<SummaryResponse>> SummarizePdfAsync(int id, string userId)
+    {
+        try
+        {
+            // Get PDF and verify ownership
+            var pdfFile = await _pdfRepository.GetByIdAsync(id);
+
+            if (pdfFile == null)
+            {
+                return ServiceResult<SummaryResponse>.FailureResult("PDF file not found");
+            }
+
+            if (pdfFile.UserId != userId)
+            {
+                return ServiceResult<SummaryResponse>.FailureResult("Unauthorized: You don't have permission to summarize this PDF");
+            }
+
+            // Check if summary already exists
+            if (!string.IsNullOrEmpty(pdfFile.Summary))
+            {
+                return ServiceResult<SummaryResponse>.SuccessResult(
+                    new SummaryResponse { Summary = pdfFile.Summary },
+                    "Summary retrieved");
+            }
+
+            // Extract text from PDF
+            var extractResult = await _textExtractor.ExtractTextFromPdfAsync(pdfFile.FilePath);
+            if (!extractResult.Success)
+            {
+                return ServiceResult<SummaryResponse>.FailureResult(extractResult.Message);
+            }
+
+            // Generate summary using Gemini
+            var summaryResult = await _geminiService.GenerateSummaryAsync(extractResult.Data);
+            if (!summaryResult.Success)
+            {
+                return ServiceResult<SummaryResponse>.FailureResult(summaryResult.Message);
+            }
+
+            // Save summary to database
+            pdfFile.Summary = summaryResult.Data;
+            await _pdfRepository.UpdateAsync(pdfFile);
+
+            return ServiceResult<SummaryResponse>.SuccessResult(
+                new SummaryResponse { Summary = summaryResult.Data },
+                "PDF summarized successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<SummaryResponse>.FailureResult("An error occurred while summarizing the PDF");
         }
     }
 }
