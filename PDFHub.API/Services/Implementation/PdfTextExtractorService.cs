@@ -2,6 +2,8 @@ using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
 using PDFHub.API.Models;
+using PDFHub.API.Models.DTOs;
+using PDFHub.API.Services.Delegates;
 using System.Text;
 
 namespace PDFHub.API.Services;
@@ -10,7 +12,7 @@ public class PdfTextExtractorService : IPdfTextExtractorService
 {
     private const int MaxTextLength = 30000; // Limit
 
-    public async Task<ServiceResult<string>> ExtractTextFromPdfAsync(string filePath)
+    public async Task<ServiceResult<string>> ExtractTextFromPdfAsync(string filePath, ProgressCallback? onProgress = null)
     {
         try
         {
@@ -27,13 +29,29 @@ public class PdfTextExtractorService : IPdfTextExtractorService
             var text = new StringBuilder();
 
             // Extract text from all pages
-            for (int i = 1; i <= pdfDocument.GetNumberOfPages(); i++)
+            int totalPages = pdfDocument.GetNumberOfPages();
+            for (int i = 1; i <= totalPages; i++)
             {
                 var page = pdfDocument.GetPage(i);
                 var strategy = new SimpleTextExtractionStrategy();
                 var pageText = PdfTextExtractor.GetTextFromPage(page, strategy);
                 text.Append(pageText);
                 text.Append("\n");
+
+                // Report progress after each page
+                if (onProgress != null)
+                {
+                    int progressPercent = (int)((double)i / totalPages * 50);
+
+                    await onProgress(new SummarizationProgressEvent
+                    {
+                        Progress = progressPercent,
+                        Stage = "ExtractingText",
+                        Message = $"Extracting page {i} of {totalPages}",
+                        IsComplete = false,
+                        IsFailed = false
+                    });
+                }
 
                 // Stop if reached max length
                 if (text.Length > MaxTextLength)
@@ -57,14 +75,6 @@ public class PdfTextExtractorService : IPdfTextExtractorService
             }
 
             return ServiceResult<string>.SuccessResult(extractedText, "Text extracted successfully");
-        }
-        catch (iText.Kernel.Exceptions.BadPasswordException)
-        {
-            return ServiceResult<string>.FailureResult("PDF is password-protected. Please provide an unprotected PDF.");
-        }
-        catch (iText.IO.Exceptions.IOException)
-        {
-            return ServiceResult<string>.FailureResult("Failed to read PDF file. File might be corrupted.");
         }
         catch (Exception)
         {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PDFHub.API.Models.DTOs;
 using PDFHub.API.Services;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace PDFHub.API.Controllers;
 
@@ -118,23 +119,30 @@ public class PdfController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("{id}/summarize")]
-    public async Task<IActionResult> SummarizePdf(int id)
+    [HttpGet("{id}/summarize")]
+    public async Task SummarizePdf(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized(new { message = "User not authenticated" });
+            Response.StatusCode = 401;
+            await Response.WriteAsync("Unauthorized");
+            return;
         }
 
-        var result = await _pdfService.SummarizePdfAsync(id, userId);
+        // Set headers for SSE
+        Response.Headers.Append("Content-Type", "text/event-stream");
+        Response.Headers.Append("Cache-Control", "no-cache");
+        Response.Headers.Append("Connection", "keep-alive");
 
-        if (!result.Success)
+        async Task SendProgressEvent(SummarizationProgressEvent progressEvent)
         {
-            return BadRequest(new { message = result.Message });
+            var json = JsonSerializer.Serialize(progressEvent);
+            await Response.WriteAsync($"data: {json}\n\n");
+            await Response.Body.FlushAsync();
         }
 
-        return Ok(result);
+        await _pdfService.SummarizePdfAsync(id, userId, SendProgressEvent);
     }
 }

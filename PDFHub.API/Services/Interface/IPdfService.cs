@@ -1,5 +1,6 @@
 using PDFHub.API.Models;
 using PDFHub.API.Models.DTOs;
+using PDFHub.API.Services.Delegates;
 
 namespace PDFHub.API.Services;
 
@@ -10,5 +11,5 @@ public interface IPdfService
     Task<ServiceResult<PdfResponse>> GetPdfByIdAsync(int id, string userId);
     Task<ServiceResult<List<PdfResponse>>> GetMyPdfsAsync(string userId);
     Task<ServiceResult> DeletePdfAsync(int id, string userId);
-    Task<ServiceResult<SummaryResponse>> SummarizePdfAsync(int id, string userId);
+    Task<ServiceResult<SummaryResponse>> SummarizePdfAsync(int id, string userId, ProgressCallback? onProgress = null);
 }

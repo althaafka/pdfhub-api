@@ -3,6 +3,7 @@ using PDFHub.API.Models;
 using PDFHub.API.Models.Domains;
 using PDFHub.API.Models.DTOs;
 using PDFHub.API.Repositories;
+using PDFHub.API.Services.Delegates;
 
 namespace PDFHub.API.Services;
 
@@ -205,48 +206,161 @@ public class PdfService : IPdfService
         }
     }
 
-    public async Task<ServiceResult<SummaryResponse>> SummarizePdfAsync(int id, string userId)
+    public async Task<ServiceResult<SummaryResponse>> SummarizePdfAsync(int id, string userId, ProgressCallback? onProgress = null)
     {
         try
         {
+            // Report: Initializing
+            if (onProgress != null)
+            {
+                await onProgress(new SummarizationProgressEvent
+                {
+                    Progress = 0,
+                    Stage = "Initializing",
+                    Message = "Starting PDF summarization...",
+                    IsComplete = false,
+                    IsFailed = false
+                });
+            }
+
             // Get PDF and verify ownership
             var pdfFile = await _pdfRepository.GetByIdAsync(id);
 
             if (pdfFile == null)
             {
+                if (onProgress != null)
+                {
+                    await onProgress(new SummarizationProgressEvent
+                    {
+                        Progress = 0,
+                        Stage = "Failed",
+                        Message = "PDF file not found",
+                        IsComplete = false,
+                        IsFailed = true,
+                        ErrorMessage = "PDF file not found"
+                    });
+                }
                 return ServiceResult<SummaryResponse>.FailureResult("PDF file not found");
             }
 
             if (pdfFile.UserId != userId)
             {
-                return ServiceResult<SummaryResponse>.FailureResult("Unauthorized: You don't have permission to summarize this PDF");
+                if (onProgress != null)
+                {
+                    await onProgress(new SummarizationProgressEvent
+                    {
+                        Progress = 0,
+                        Stage = "Failed",
+                        Message = "Unauthorized",
+                        IsComplete = false,
+                        IsFailed = true,
+                        ErrorMessage = "Unauthorized"
+                    });
+                }
+                return ServiceResult<SummaryResponse>.FailureResult("Unauthorized");
             }
 
             // Check if summary already exists
             if (!string.IsNullOrEmpty(pdfFile.Summary))
             {
+                if (onProgress != null)
+                {
+                    await onProgress(new SummarizationProgressEvent
+                    {
+                        Progress = 100,
+                        Stage = "Cached",
+                        Message = "Summary already exists",
+                        IsComplete = true,
+                        IsFailed = false,
+                        Summary = pdfFile.Summary
+                    });
+                }
                 return ServiceResult<SummaryResponse>.SuccessResult(
                     new SummaryResponse { Summary = pdfFile.Summary },
                     "Summary retrieved");
             }
 
-            // Extract text from PDF
-            var extractResult = await _textExtractor.ExtractTextFromPdfAsync(pdfFile.FilePath);
+            // Extract text from PDF (0-50%)
+            var extractResult = await _textExtractor.ExtractTextFromPdfAsync(pdfFile.FilePath, onProgress);
             if (!extractResult.Success)
             {
+                if (onProgress != null)
+                {
+                    await onProgress(new SummarizationProgressEvent
+                    {
+                        Progress = 0,
+                        Stage = "Failed",
+                        Message = "Text extraction failed",
+                        IsComplete = false,
+                        IsFailed = true,
+                        ErrorMessage = extractResult.Message
+                    });
+                }
                 return ServiceResult<SummaryResponse>.FailureResult(extractResult.Message);
             }
 
-            // Generate summary using Gemini
+            // Report: Starting AI summarization (51%)
+            if (onProgress != null)
+            {
+                await onProgress(new SummarizationProgressEvent
+                {
+                    Progress = 51,
+                    Stage = "GeneratingSummary",
+                    Message = "Calling AI to generate summary...",
+                    IsComplete = false,
+                    IsFailed = false
+                });
+            }
+
+            // Generate summary using Gemini (51-90%)
             var summaryResult = await _geminiService.GenerateSummaryAsync(extractResult.Data);
             if (!summaryResult.Success)
             {
+                if (onProgress != null)
+                {
+                    await onProgress(new SummarizationProgressEvent
+                    {
+                        Progress = 51,
+                        Stage = "Failed",
+                        Message = "AI summarization failed",
+                        IsComplete = false,
+                        IsFailed = true,
+                        ErrorMessage = summaryResult.Message
+                    });
+                }
                 return ServiceResult<SummaryResponse>.FailureResult(summaryResult.Message);
+            }
+
+            // Report: AI complete, now saving (90%)
+            if (onProgress != null)
+            {
+                await onProgress(new SummarizationProgressEvent
+                {
+                    Progress = 90,
+                    Stage = "SavingSummary",
+                    Message = "Saving summary to database...",
+                    IsComplete = false,
+                    IsFailed = false
+                });
             }
 
             // Save summary to database
             pdfFile.Summary = summaryResult.Data;
             await _pdfRepository.UpdateAsync(pdfFile);
+
+            // Report: Complete (100%)
+            if (onProgress != null)
+            {
+                await onProgress(new SummarizationProgressEvent
+                {
+                    Progress = 100,
+                    Stage = "Completed",
+                    Message = "PDF summarized successfully",
+                    IsComplete = true,
+                    IsFailed = false,
+                    Summary = summaryResult.Data
+                });
+            }
 
             return ServiceResult<SummaryResponse>.SuccessResult(
                 new SummaryResponse { Summary = summaryResult.Data },
@@ -254,6 +368,18 @@ public class PdfService : IPdfService
         }
         catch (Exception ex)
         {
+            if (onProgress != null)
+            {
+                await onProgress(new SummarizationProgressEvent
+                {
+                    Progress = 0,
+                    Stage = "Failed",
+                    Message = "An unexpected error occurred",
+                    IsComplete = false,
+                    IsFailed = true,
+                    ErrorMessage = "An error occurred while summarizing the PDF"
+                });
+            }
             return ServiceResult<SummaryResponse>.FailureResult("An error occurred while summarizing the PDF");
         }
     }
