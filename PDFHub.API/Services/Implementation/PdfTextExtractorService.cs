@@ -8,7 +8,7 @@ namespace PDFHub.API.Services;
 
 public class PdfTextExtractorService : IPdfTextExtractorService
 {
-    private const int MaxTextLength = 30000; // Limit to avoid Gemini API limits
+    private const int MaxTextLength = 30000; // Limit
 
     public async Task<ServiceResult<string>> ExtractTextFromPdfAsync(string filePath)
     {
@@ -21,11 +21,6 @@ public class PdfTextExtractorService : IPdfTextExtractorService
             }
 
             // Extract text from PDF
-            await Task.Run(() =>
-            {
-                // This runs synchronously but wrapped in Task for consistency
-            });
-
             using var pdfReader = new PdfReader(filePath);
             using var pdfDocument = new PdfDocument(pdfReader);
 
@@ -40,7 +35,7 @@ public class PdfTextExtractorService : IPdfTextExtractorService
                 text.Append(pageText);
                 text.Append("\n");
 
-                // Stop if we've reached the max length
+                // Stop if reached max length
                 if (text.Length > MaxTextLength)
                 {
                     break;
@@ -52,7 +47,7 @@ public class PdfTextExtractorService : IPdfTextExtractorService
             // Validate extracted text
             if (string.IsNullOrWhiteSpace(extractedText))
             {
-                return ServiceResult<string>.FailureResult("No text could be extracted from PDF. It might be scanned or image-based.");
+                return ServiceResult<string>.FailureResult("No text could be extracted from PDF");
             }
 
             // Truncate if too long
