@@ -18,11 +18,11 @@ public class GeminiApiService : IGeminiApiService
         {
             // Get configuration
             var apiKey = _configuration["GeminiApi:ApiKey"];
-            var model = _configuration["GeminiApi:Model"] ?? "gemini-1.5-flash";
+            var model = _configuration["GeminiApi:Model"];
 
-            if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR_GEMINI_API_KEY_HERE")
+            if (string.IsNullOrEmpty(apiKey))
             {
-                return ServiceResult<string>.FailureResult("Gemini API key not configured. Please add your API key to appsettings.json");
+                return ServiceResult<string>.FailureResult("Gemini API key not configured.");
             }
 
             // Validate input text
@@ -48,17 +48,9 @@ public class GeminiApiService : IGeminiApiService
 
             return ServiceResult<string>.SuccessResult(summary, "Summary generated successfully");
         }
-        catch (TaskCanceledException)
-        {
-            return ServiceResult<string>.FailureResult("Request timed out. Please try again.");
-        }
-        catch (HttpRequestException)
-        {
-            return ServiceResult<string>.FailureResult("Network error. Please check your internet connection and try again.");
-        }
         catch (Exception)
         {
-            return ServiceResult<string>.FailureResult("Failed to generate summary. Please try again later.");
+            return ServiceResult<string>.FailureResult("Failed to generate summary");
         }
     }
 }
